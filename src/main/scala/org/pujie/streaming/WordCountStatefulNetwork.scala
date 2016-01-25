@@ -4,35 +4,40 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 /**
- * [¼ÆËãÀÛ¼ÓÖµ]
- * Spark StreamingµÄupdateStateByKey¿ÉÒÔDStreamÖĞµÄÊı¾İ½øĞĞ°´key×öreduce²Ù×÷£¬È»ºó¶Ô¸÷¸öÅú´ÎµÄÊı¾İ½øĞĞÀÛ¼Ó¡£
+ * [å¸¦çŠ¶æ€çš„æ“ä½œ][è®¡ç®—ç´¯åŠ å€¼]
+ * Spark Streamingçš„updateStateByKeyå¯ä»¥DStreamä¸­çš„æ•°æ®è¿›è¡ŒæŒ‰keyåšreduceæ“ä½œï¼Œç„¶åå¯¹å„ä¸ªæ‰¹æ¬¡çš„æ•°æ®è¿›è¡Œç´¯åŠ ã€‚
+ * UpdateStateByKeyåŸè¯­ç”¨äºè®°å½•å†å²è®°å½•ã€‚è‹¥ä¸ç”¨UpdateStateByKeyæ¥æ›´æ–°çŠ¶æ€ï¼Œé‚£ä¹ˆæ¯æ¬¡æ•°æ®è¿›æ¥ååˆ†æå®Œæˆåï¼Œç»“æœè¾“å‡ºåå°†ä¸åœ¨ä¿å­˜ã€‚
+ * ä½¿ç”¨UpdateStateByKeyåŸè¯­éœ€è¦ç”¨äºè®°å½•çš„Stateï¼Œå¯ä»¥ä¸ºä»»æ„ç±»å‹ï¼Œå¦‚ä¸Šä¾‹ä¸­å³ä¸ºOptional<Intege>ç±»å‹ï¼›æ­¤å¤–è¿˜éœ€è¦æ›´æ–°Stateçš„å‡½æ•°ã€‚
+ * 1ï¼Œ
  * Created by pujie on 2015/10/30.
  */
 object WordCountStatefulNetwork {
 
     def main (args: Array[String]){
-        if(args.length != 3){
-          println("Usage:  <hostname> <port> <seconds>\n" + "In local mode, <master> should be 'local[n]' with n > 1")
+        if(args.length != 4){
+          println("Usage:  <hostname> <port> <seconds> <checkpoint>\n" + "In local mode, <master> should be 'local[n]' with n > 1")
           System.exit(1)
         }
-        //×´Ì¬¸üĞÂº¯Êı
+        //çŠ¶æ€æ›´æ–°å‡½æ•°
         val updateFunc = (currValues:Seq[Int],preValuesState:Option[Int])=>{
-            //Í¨¹ıSparkÄÚ²¿µÄreduceByKey°´Key¹æÔ¼£¬È»ºóÕâÀï´«ÈëÄ³Keyµ±Ç°Åú´ÎµÄSeq/List£¬ÔÙ¼ÆËãµ±Ç°Åú´ÎµÄ×ÜºÍ¡£
+            //é€šè¿‡Sparkå†…éƒ¨çš„reduceByKeyæŒ‰Keyè§„çº¦ï¼Œç„¶åè¿™é‡Œä¼ å…¥æŸKeyå½“å‰æ‰¹æ¬¡çš„Seq/Listï¼Œå†è®¡ç®—å½“å‰æ‰¹æ¬¡çš„æ€»å’Œã€‚
             val currentCount = currValues.sum
-            //ÒÑÀÛ¼ÓµÄÖµ
+            //å·²ç´¯åŠ çš„å€¼
             val previousCount = preValuesState.getOrElse(0)
-            //·µ»ØÀÛ¼ÓºóµÄ½á¹û£¬ÊÇÒ»¸öOption[Int]ÀàĞÍ
+            //è¿”å›ç´¯åŠ åçš„ç»“æœï¼Œæ˜¯ä¸€ä¸ªOption[Int]ç±»å‹
             Some(currentCount + previousCount)
         }
 
         val conf = new SparkConf().setAppName("WordCount-Stateful-Network")
         val ssc = new StreamingContext(conf,Seconds(args(2).toInt))
-        //´´½¨NetworkInputDStream£¬ĞèÒªÖ¸¶¨IPºÍ¶Ë¿Ú
+        //ä½¿ç”¨updateStateByKeyå‰éœ€è¦è®¾ç½®checkpoint
+        ssc.checkpoint(args(3))
+        //åˆ›å»ºNetworkInputDStreamï¼Œéœ€è¦æŒ‡å®šIPå’Œç«¯å£
         val lines = ssc.socketTextStream(args(0),args(1).toInt)
         val words = lines.flatMap(_.split(" "))
-        val wordDStream = words.map(x=>(x,1))
-        //Ê¹ÓÃupdateStateBykeyÀ´¸üĞÂ×´Ì¬
-        val stateDStream = wordDStream.updateStateByKey(updateFunc)
+        val pairs = words.map(x=>(x,1))
+        //ä½¿ç”¨updateStateBykeyæ¥æ›´æ–°çŠ¶æ€
+        val stateDStream = pairs.updateStateByKey(updateFunc)
         stateDStream.print()
         ssc.start()
         ssc.awaitTermination()
