@@ -4,25 +4,25 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 /**
- * ´ÓsocketÖĞ¶ÁÈ¡Êı¾İ£¬¼ÆËãµ¥´ÊÊıÁ¿¡£
+ * ä»socketä¸­è¯»å–æ•°æ®ï¼Œè®¡ç®—å•è¯æ•°é‡ã€‚
  * Created by pujie on 2015/10/30.
  */
 object WordCountHdfs {
 
     def main(args:Array[String]): Unit ={
       if(args.length !=2){
-        println("Usage:  <directory> <seconds>\n" + "In local mode, <master> should be 'local[n]' with n > 1")
+        println("Usage:  <directory> <batch-size>\n" + "In local mode, <master> should be 'local[n]' with n > 1")
         System.exit(1)
       }
-      val sourceDirectory = args(0) //hdfsÂ·¾¶
-      val seconds = args(1).toInt  //´¦ÀíÊ±¼ä¼ä¸ô¡£
+      val sourceDirectory = args(0) //hdfsè·¯å¾„
+      val batchSize = args(1).toInt  //å¤„ç†æ—¶é—´é—´éš”ã€‚
       val conf = new SparkConf().setAppName("WordCount-hdfs")
-      val ssc = new StreamingContext(conf,Seconds(seconds))
+      val ssc = new StreamingContext(conf,Seconds(batchSize))
       val lines = ssc.textFileStream(sourceDirectory)
       val words = lines.flatMap(x => x.split(" "))
-      val wordsCounts = words.map(x=>(x,1)).reduceByKey(_+_) //reduceByKeyÏàµ±ÓÚÏÈÖ´ĞĞgroupByKey£¬ÔÙ¶Ô½á¹û×öreduce¼ÆËã¡£
+      val wordsCounts = words.map(x=>(x,1)).reduceByKey(_+_) //reduceByKeyç›¸å½“äºå…ˆæ‰§è¡ŒgroupByKeyï¼Œå†å¯¹ç»“æœåšreduceè®¡ç®—ã€‚
       wordsCounts.print()
-      ssc.start()   //Æô¶¯ÈÎÎñ
-      ssc.awaitTermination() //µÈ´ı±»Ö´ĞĞ
+      ssc.start()   //å¯åŠ¨ä»»åŠ¡
+      ssc.awaitTermination() //ç­‰å¾…è¢«æ‰§è¡Œ
     }
 }
