@@ -31,8 +31,10 @@ object WordCountWindow {
     val wordPair = words.map((x:String)=>(x,1))
     val wordWindowCount = wordPair.reduceByKeyAndWindow((x:Int,y:Int)=>x+y,_-_,Seconds(windowDuration),Seconds(slideDuration))
 
+    val sortedWords = wordWindowCount.map(x=>(x._2,x._1)).transform(_.sortByKey(false)).map(x=>(x._2,x._1))   //对DStream排序
 //    wordWindowCount.print()
-    wordWindowCount.saveAsTextFiles(saveDirectory) //窗口滑动一次，生成一个output文件。
+//    wordWindowCount.saveAsTextFiles(saveDirectory) //窗口滑动一次，生成一个output文件。
+    sortedWords.saveAsTextFiles(saveDirectory)
     ssc.start()
     ssc.awaitTermination()
 
